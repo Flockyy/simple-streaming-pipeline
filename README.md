@@ -235,4 +235,4 @@ simple-streaming-pipeline/
 
 ## 📄 License
 
-Ce projet est destiné à des fins pédagogiques dans le cadre de la formation SmartTech IoT.
+Ce projet est destiné à des fins pédagogiques.
