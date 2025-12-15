@@ -55,3 +55,6 @@ kafka-logs/
 
 # Delta Lake
 _delta_log/
+
+# PDF generation script
+generate_pdf.py
