@@ -56,10 +56,7 @@ Spark Structured Streaming traite les flux de données comme des **tables infini
 - **Performance** : Optimal, pas de réécriture
 
 ```python
-query = stream.writeStream \
-    .outputMode("append") \
-    .format("delta") \
-    .start("/path/to/bronze")
+query = stream.writeStream.outputMode("append").format("delta").start("/path/to/bronze")
 ```
 
 #### Update (Mise à jour)
@@ -69,11 +66,11 @@ query = stream.writeStream \
 - **Performance** : Modéré, écritures sélectives
 
 ```python
-query = stream.groupBy("sensor_id").count() \
-    .writeStream \
-    .outputMode("update") \
-    .format("delta") \
-    .start("/path/to/aggregates")
+query = (stream.groupBy("sensor_id").count()
+    .writeStream
+    .outputMode("update")
+    .format("delta")
+    .start("/path/to/aggregates"))
 ```
 
 #### Complete (Complet)
@@ -83,11 +80,11 @@ query = stream.groupBy("sensor_id").count() \
 - **Performance** : Coûteux, à éviter pour grandes tables
 
 ```python
-query = stream.groupBy("building_id").sum("energy") \
-    .writeStream \
-    .outputMode("complete") \
-    .format("memory") \
-    .start()
+query = (stream.groupBy("building_id").sum("energy")
+    .writeStream
+    .outputMode("complete")
+    .format("memory")
+    .start())
 ```
 
 ---
@@ -102,9 +99,9 @@ Le checkpointing sauvegarde l'état du streaming pour permettre une reprise exac
 
 ### 3.2 Configuration
 ```python
-query = stream.writeStream \
-    .option("checkpointLocation", "/path/to/checkpoint") \
-    .start()
+query = (stream.writeStream
+    .option("checkpointLocation", "/path/to/checkpoint")
+    .start())
 ```
 
 ### 3.3 Garanties ACID avec Delta Lake
@@ -181,7 +178,7 @@ stream.groupBy(
 - Chevauchement configurable
 - **Use Case SmartTech** : Température moyenne sur 10 min, mise à jour chaque minute
 ```python
-stream.groupBy(
+result = stream.groupBy(
     window("timestamp", "10 minutes", "1 minute"),
     "sensor_id"
 ).avg("temperature")
@@ -191,9 +188,9 @@ stream.groupBy(
 Les watermarks définissent **combien de temps attendre** les données en retard :
 
 ```python
-stream.withWatermark("timestamp", "15 minutes") \
-    .groupBy(window("timestamp", "5 minutes"), "building_id") \
-    .count()
+result = (stream.withWatermark("timestamp", "15 minutes")
+    .groupBy(window("timestamp", "5 minutes"), "building_id")
+    .count())
 ```
 
 **Fonctionnement** :
@@ -238,13 +235,13 @@ Architecture en **trois couches** pour transformation progressive des données :
 - Écriture en Delta Lake
 
 ```python
-bronze = raw_stream \
-    .filter(col("sensor_id").isNotNull()) \
-    .withColumn("ingestion_time", current_timestamp()) \
-    .writeStream \
-    .format("delta") \
-    .outputMode("append") \
-    .start("/bronze/sensors")
+bronze = (raw_stream
+    .filter(col("sensor_id").isNotNull())
+    .withColumn("ingestion_time", current_timestamp())
+    .writeStream
+    .format("delta")
+    .outputMode("append")
+    .start("/bronze/sensors"))
 ```
 
 ### 6.3 Couche Silver (Cleaned/Enriched)
@@ -263,16 +260,16 @@ bronze = raw_stream \
 - Jointures avec tables de référence (bâtiments, capteurs)
 
 ```python
-silver = bronze_stream \
-    .filter(col("temperature").between(-50, 60)) \
+silver = (bronze_stream
+    .filter(col("temperature").between(-50, 60))
     .withColumn("comfort_index", 
         when((col("temp").between(20,24)) & 
              (col("humidity").between(40,60)), "comfortable")
-        .otherwise("uncomfortable")) \
-    .writeStream \
-    .format("delta") \
-    .outputMode("append") \
-    .start("/silver/sensors")
+        .otherwise("uncomfortable"))
+    .writeStream
+    .format("delta")
+    .outputMode("append")
+    .start("/silver/sensors"))
 ```
 
 ### 6.4 Couche Gold (Aggregated/Business)
@@ -291,19 +288,18 @@ silver = bronze_stream \
 - Tableaux de bord temps réel
 
 ```python
-gold = silver_stream \
+gold = (silver_stream
     .groupBy(
         window("timestamp", "1 day"),
-        "building_id"
-    ).agg(
+        "building_id")
+    .agg(
         sum("energy_consumption").alias("daily_energy"),
         avg("temperature").alias("avg_temp"),
-        sum(when(col("anomaly"), 1)).alias("anomaly_count")
-    ) \
-    .writeStream \
-    .format("delta") \
-    .outputMode("update") \
-    .start("/gold/daily_stats")
+        sum(when(col("anomaly"), 1)).alias("anomaly_count"))
+    .writeStream
+    .format("delta")
+    .outputMode("update")
+    .start("/gold/daily_stats"))
 ```
 
 ### 6.5 Avantages pour SmartTech
@@ -412,12 +408,12 @@ Les trois groupes lisent **indépendamment** le même flux.
 ### 7.3 Intégration Spark + Kafka
 
 ```python
-kafka_stream = spark.readStream \
-    .format("kafka") \
-    .option("kafka.bootstrap.servers", "localhost:9092") \
-    .option("subscribe", "iot_sensors") \
-    .option("startingOffsets", "earliest") \
-    .load()
+kafka_stream = (spark.readStream
+    .format("kafka")
+    .option("kafka.bootstrap.servers", "localhost:9092")
+    .option("subscribe", "iot_sensors")
+    .option("startingOffsets", "earliest")
+    .load())
 ```
 
 **Gestion Automatique** :
@@ -435,14 +431,12 @@ kafka_stream = spark.readStream \
 
 **Logique** :
 ```python
-anomalies = silver_stream \
-    .filter(col("anomaly_detected") == True) \
+anomalies = (silver_stream
+    .filter(col("anomaly_detected") == True)
     .select("sensor_id", "building_id", "timestamp", 
-            "temperature", "humidity", "co2_level")
+            "temperature", "humidity", "co2_level"))
 
-anomalies.writeStream \
-    .foreach(send_alert_to_ops_team) \
-    .start()
+anomalies.writeStream.foreach(send_alert_to_ops_team).start()
 ```
 
 **Bénéfices** :
