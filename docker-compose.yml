@@ -1,0 +1,164 @@
+version: '3.8'
+
+services:
+  # Zookeeper - Required for Kafka coordination
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - streaming-network
+
+  # Kafka Broker
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - streaming-network
+    healthcheck:
+      test: [ "CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # Spark Master
+  spark-master:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spark-master
+    hostname: spark-master
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "8080:8080" # Spark Master Web UI
+      - "7077:7077" # Spark Master port
+    volumes:
+      - ./data:/app/data:ro
+      - ./output:/app/output
+      - ./checkpoints:/app/checkpoints
+    networks:
+      - streaming-network
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+
+  # Spark Worker
+  spark-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=local[2]
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2g
+    ports:
+      - "8081-8083:8081" # Spark Worker Web UI
+    volumes:
+      - ./data:/app/data:ro
+      - ./output:/app/output
+      - ./checkpoints:/app/checkpoints
+    networks:
+      - streaming-network
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+
+  # Streaming Application - JSON to Delta Bronze
+  bronze-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bronze-pipeline
+    depends_on:
+      - spark-master
+      - spark-worker
+    environment:
+      - SPARK_MASTER_URL=local[2]
+      - INPUT_PATH=/app/data/sensor_data
+      - OUTPUT_PATH=/app/output/delta/bronze/sensor_data
+      - CHECKPOINT_PATH=/app/checkpoints/bronze
+    volumes:
+      - ./data:/app/data:ro
+      - ./output:/app/output
+      - ./checkpoints:/app/checkpoints
+      - ./scripts:/app/scripts:ro
+    networks:
+      - streaming-network
+    command: python /app/scripts/bronze_pipeline.py
+    restart: unless-stopped
+
+  # Streaming Application - Kafka to Delta Silver
+  silver-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: silver-pipeline
+    depends_on:
+      kafka:
+        condition: service_healthy
+      spark-master:
+        condition: service_started
+      spark-worker:
+        condition: service_started
+    environment:
+      - SPARK_MASTER_URL=local[2]
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_TOPIC=iot_sensors
+      - OUTPUT_PATH=/app/output/delta/silver/sensor_data
+      - CHECKPOINT_PATH=/app/checkpoints/silver
+      - INPUT_DATA_PATH=/app/data/sensor_data
+    volumes:
+      - ./data:/app/data:ro
+      - ./output:/app/output
+      - ./checkpoints:/app/checkpoints
+      - ./scripts:/app/scripts:ro
+    networks:
+      - streaming-network
+    command: python /app/scripts/silver_pipeline.py
+    restart: unless-stopped
+
+  # Kafka Producer - Sends sensor data to Kafka
+  kafka-producer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kafka-producer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_TOPIC=iot_sensors
+      - DATA_PATH=/app/data/sensor_data
+    volumes:
+      - ./data:/app/data:ro
+      - ./scripts:/app/scripts:ro
+    networks:
+      - streaming-network
+    command: python /app/scripts/kafka_producer.py
+    restart: unless-stopped
+
+networks:
+  streaming-network:
+    driver: bridge
+
+volumes:
+  output:
+  checkpoints:
