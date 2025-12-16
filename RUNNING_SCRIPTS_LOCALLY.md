@@ -1,20 +1,31 @@
 # Running Scripts Locally - SUCCESS! ✅
 
-## Bronze Pipeline - Local Execution Confirmed
+## Both Pipelines - Local Execution Confirmed
 
 ### ✅ Test Results
-```bash
-cd ~/wsl-projects/simple-streaming-pipeline
-python test_bronze_local.py
 
-# Output:
+**Bronze Pipeline:**
+```bash
+python test_bronze_local.py
 # ✅ SUCCESS: 250 records written to Delta Lake
 # 📊 Processed 250 records in 5 batches
 ```
 
-### How to Run Scripts Locally
+**Silver Pipeline:**
+```bash
+python test_silver_local.py
+# ✅ SUCCESS: 2,417 records written to Delta Lake Silver
+# 📊 Processed 2,417 Kafka messages in 6 batches
+# Comfort Index: 467 acceptable, 576 comfortable
+# Air Quality: 130 excellent, 138 good, 111 fair, 161 poor
+# ⚠️ Total anomalies detected: 161
+```
 
-#### Bronze Pipeline (JSON → Delta)
+---
+
+## How to Run Scripts Locally
+
+### Bronze Pipeline (JSON → Delta)
 ```bash
 cd ~/wsl-projects/simple-streaming-pipeline
 source .venv/bin/activate
@@ -33,23 +44,38 @@ python test_bronze_local.py
 
 ---
 
-#### Silver Pipeline (Kafka → Delta)
-**Requires Kafka running:**
+### Silver Pipeline (Kafka → Delta)
+
+**Step 1: Start Kafka**
 ```bash
-# Terminal 1: Start Kafka
 cd ~/wsl-projects/simple-streaming-pipeline
 docker-compose up -d zookeeper kafka kafka-producer
-
-# Wait 15 seconds for Kafka to be ready
-sleep 15
-
-# Terminal 2: Run Silver pipeline
-cd ~/wsl-projects/simple-streaming-pipeline
-source .venv/bin/activate
-python scripts/silver_pipeline.py
+sleep 15  # Wait for Kafka to be ready
 ```
 
-**Note:** The original `scripts/bronze_pipeline.py` and `scripts/silver_pipeline.py` are designed to run indefinitely (for production). The `test_bronze_local.py` script is a simplified version that runs for 20 seconds and then stops, making it easier to test.
+**Step 2: Run Silver Pipeline**
+```bash
+source .venv/bin/activate
+python test_silver_local.py
+```
+
+**What it does:**
+- Connects to Kafka on localhost:9092
+- Consumes messages from `iot_sensors` topic
+- Enriches data with:
+  - Comfort Index (cold/comfortable/acceptable)
+  - Air Quality (excellent/good/fair/poor)
+  - Anomaly detection
+- Writes enriched data to Delta Lake
+- Runs for 25 seconds then stops
+- Shows statistics and distributions
+
+**Output:** `output_test/delta/silver/`
+
+**Step 3: Stop Kafka (when done)**
+```bash
+docker-compose down
+```
 
 ---
 
