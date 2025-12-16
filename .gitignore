@@ -58,3 +58,6 @@ _delta_log/
 
 # PDF generation script
 generate_pdf.py
+
+# JAR files
+jars/
