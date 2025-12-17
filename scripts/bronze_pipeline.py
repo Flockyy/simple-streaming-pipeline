@@ -54,6 +54,8 @@ spark = SparkSession.builder \
 
 # Disable symlink resolution for WSL2 Docker compatibility
 spark.sparkContext._jsc.hadoopConfiguration().set("fs.file.impl", "org.apache.hadoop.fs.RawLocalFileSystem")
+# Disable path globbing to avoid symbolic link resolution issues
+spark.sparkContext._jsc.hadoopConfiguration().set("fs.file.impl.disable.cache", "true")
 spark.sparkContext.setLogLevel("WARN")
 print(f"Spark Session created (version {spark.version})\n")
 
@@ -70,11 +72,12 @@ sensor_schema = StructType([
 
 # Read streaming JSON files
 print("Setting up JSON file stream...")
-# Use explicit file:// URI for Docker (WSL2 compatibility)
-input_path = INPUT_PATH
+# Use explicit file:// URI and glob pattern for Docker compatibility
+input_path = f"file://{INPUT_PATH}/*.json"
 json_stream = spark.readStream \
     .schema(sensor_schema) \
     .option("maxFilesPerTrigger", 5) \
+    .option("latestFirst", "false") \
     .json(input_path)
 
 print("Stream configured\n")
