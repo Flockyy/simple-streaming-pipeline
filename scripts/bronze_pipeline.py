@@ -5,8 +5,20 @@ Streams JSON sensor data files to Delta Lake Bronze layer
 import os
 import sys
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import *
-from pyspark.sql.types import *
+from pyspark.sql.functions import (
+    col,
+    current_timestamp,
+    input_file_name,
+    to_timestamp,
+    when,
+)
+from pyspark.sql.types import (
+    DoubleType,
+    IntegerType,
+    StringType,
+    StructField,
+    StructType,
+)
 
 # Configuration from environment variables
 INPUT_PATH = os.getenv("INPUT_PATH", "data/sensor_data")
@@ -38,7 +50,7 @@ spark = SparkSession.builder \
     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
     .config("spark.sql.streaming.schemaInference", "true") \
     .config("spark.hadoop.fs.file.impl.disable.cache", "true") \
-    .getOrCreate()
+    .getOrCreate()  # type: ignore[attr-defined]
 
 # Disable symlink resolution for WSL2 Docker compatibility
 spark.sparkContext._jsc.hadoopConfiguration().set("fs.file.impl", "org.apache.hadoop.fs.RawLocalFileSystem")

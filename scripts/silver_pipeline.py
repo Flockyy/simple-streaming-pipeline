@@ -4,9 +4,22 @@ Consumes sensor data from Kafka, applies transformations, and writes to Delta La
 """
 import os
 import sys
+import time
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import *
-from pyspark.sql.types import *
+from pyspark.sql.functions import (
+    col,
+    current_timestamp,
+    from_json,
+    to_timestamp,
+    when,
+)
+from pyspark.sql.types import (
+    DoubleType,
+    IntegerType,
+    StringType,
+    StructField,
+    StructType,
+)
 
 # Configuration from environment variables
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
@@ -27,7 +40,6 @@ print("="*60 + "\n")
 
 # Wait for Kafka to be ready
 print("⏳ Waiting for Kafka to be ready...")
-import time
 time.sleep(15)
 
 # Create Spark Session with Delta Lake and Kafka support
@@ -36,11 +48,11 @@ if os.path.exists("/app/jars/delta-spark_2.12-3.2.1.jar"):
     jar_path = "/app/jars/delta-spark_2.12-3.2.1.jar,/app/jars/delta-storage-3.2.1.jar"
     kafka_jars = "/app/jars/spark-sql-kafka-0-10_2.12-3.5.3.jar,/app/jars/spark-token-provider-kafka-0-10_2.12-3.5.3.jar,/app/jars/kafka-clients-3.5.1.jar,/app/jars/commons-pool2-2.12.0.jar"
     jar_path = jar_path + "," + kafka_jars
-    spark_builder = SparkSession.builder.config("spark.jars", jar_path)
+    spark_builder = SparkSession.builder.config("spark.jars", jar_path)  # type: ignore[attr-defined]
 else:
     jar_path = os.path.abspath("jars/delta-spark_2.12-3.2.1.jar") + "," + os.path.abspath("jars/delta-storage-3.2.1.jar")
     # Local: use packages for Kafka (Maven download)
-    spark_builder = SparkSession.builder.config("spark.jars", jar_path).config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3")
+    spark_builder = SparkSession.builder.config("spark.jars", jar_path).config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3")  # type: ignore[attr-defined]
 
 spark = spark_builder \
     .appName("Silver_Pipeline_Kafka_to_Delta") \
@@ -50,7 +62,7 @@ spark = spark_builder \
     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
     .config("spark.hadoop.fs.file.impl.disable.cache", "true") \
-    .getOrCreate()
+    .getOrCreate()  # type: ignore[attr-defined]
 
 # Disable symlink resolution for WSL2 Docker compatibility
 spark.sparkContext._jsc.hadoopConfiguration().set("fs.file.impl", "org.apache.hadoop.fs.RawLocalFileSystem")

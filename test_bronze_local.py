@@ -5,8 +5,23 @@ This version uses simpler paths and avoids the mkdir issue.
 """
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import *
-from pyspark.sql.types import *
+from pyspark.sql.functions import (
+    col,
+    count,
+    countDistinct,
+    current_timestamp,
+    desc,
+    input_file_name,
+    to_timestamp,
+    when,
+)
+from pyspark.sql.types import (
+    DoubleType,
+    IntegerType,
+    StringType,
+    StructField,
+    StructType,
+)
 import os
 
 print("="*60)

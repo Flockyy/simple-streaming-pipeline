@@ -5,8 +5,27 @@ This version uses simpler paths and works with local Kafka.
 """
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import *
-from pyspark.sql.types import *
+from pyspark.sql.functions import (
+    avg,
+    col,
+    count,
+    countDistinct,
+    current_timestamp,
+    desc,
+    from_json,
+    max as spark_max,
+    min as spark_min,
+    to_timestamp,
+    when,
+    window,
+)
+from pyspark.sql.types import (
+    DoubleType,
+    IntegerType,
+    StringType,
+    StructField,
+    StructType,
+)
 import os
 import time
 
