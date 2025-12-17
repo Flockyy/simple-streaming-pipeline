@@ -39,7 +39,7 @@ print(f"Spark Master: {SPARK_MASTER_URL}")
 print("="*60 + "\n")
 
 # Wait for Kafka to be ready
-print("⏳ Waiting for Kafka to be ready...")
+print("Waiting for Kafka to be ready...")
 time.sleep(15)
 
 # Create Spark Session with Delta Lake and Kafka support
@@ -67,7 +67,7 @@ spark = spark_builder \
 # Disable symlink resolution for WSL2 Docker compatibility
 spark.sparkContext._jsc.hadoopConfiguration().set("fs.file.impl", "org.apache.hadoop.fs.RawLocalFileSystem")
 spark.sparkContext.setLogLevel("WARN")
-print(f"✓ Spark Session created (version {spark.version})\n")
+print(f"Spark Session created (version {spark.version})\n")
 
 # Define schema for sensor data
 sensor_schema = StructType([
@@ -81,7 +81,7 @@ sensor_schema = StructType([
 ])
 
 # Read from Kafka stream
-print("📖 Connecting to Kafka stream...")
+print("Connecting to Kafka stream...")
 kafka_stream = spark.readStream \
     .format("kafka") \
     .option("kafka.bootstrap.servers", KAFKA_BOOTSTRAP_SERVERS) \
@@ -94,7 +94,7 @@ kafka_stream = spark.readStream \
 print("✓ Kafka stream configured\n")
 
 # Silver transformations
-print("🔧 Applying Silver transformations...")
+print("Applying Silver transformations...")
 silver_stream = kafka_stream \
     .select(
         col("topic"),
@@ -165,10 +165,10 @@ silver_stream = kafka_stream \
         col("processing_time")
     )
 
-print("✓ Transformations configured\n")
+print("Transformations configured\n")
 
 # Write to Delta Lake
-print("💾 Starting Delta Lake write stream...")
+print("Starting Delta Lake write stream...")
 query = silver_stream.writeStream \
     .format("delta") \
     .outputMode("append") \
@@ -176,10 +176,10 @@ query = silver_stream.writeStream \
     .trigger(processingTime="5 seconds") \
     .start(OUTPUT_PATH)
 
-print(f"✓ Streaming query started (ID: {query.id})")
-print(f"✓ Status: {query.status}")
+print(f"Streaming query started (ID: {query.id})")
+print(f"Status: {query.status}")
 print("\n" + "="*60)
-print("🔄 PIPELINE IS RUNNING - Processing Kafka messages...")
+print("PIPELINE IS RUNNING - Processing Kafka messages...")
 print("   Press Ctrl+C to stop")
 print("="*60 + "\n")
 
@@ -187,8 +187,8 @@ try:
     # Wait for termination
     query.awaitTermination()
 except KeyboardInterrupt:
-    print("\n⏹️  Stopping pipeline...")
+    print("\nStopping pipeline...")
     query.stop()
     spark.stop()
-    print("✓ Pipeline stopped gracefully")
+    print("Pipeline stopped gracefully")
     sys.exit(0)

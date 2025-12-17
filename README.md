@@ -381,6 +381,43 @@ docker-compose exec kafka kafka-console-consumer --topic iot_sensors --from-begi
 - Backup des données Delta Lake
 - Health checks et restart policies
 
+## 📚 Documentation Guides
+
+### 📋 LOCAL_SETUP_SUMMARY.md
+**Environment Configuration & Setup**
+- ✅ Complete local development environment (Java 17, Python 3.12.3, PySpark 3.5.3, Delta Lake 3.2.1)
+- ✅ Bronze pipeline tested with 425 records processed and 27 anomalies detected
+- Jupyter kernel configured: "Streaming Pipeline (PySpark 3.5.3)"
+- Both Docker and local execution options available
+- Bronze layer: JSON → Spark Streaming → Delta Lake with anomaly detection
+- Silver layer: Kafka → Spark Streaming → Delta Lake with enrichments (comfort index, air quality)
+
+### 📓 NOTEBOOKS_SETUP.md
+**Jupyter Notebooks Guide**
+- **Bronze Notebook (2.1)**: Works 100% locally, processes JSON files to Delta Lake Bronze layer
+- **Silver Notebook (2.2)**: Requires Kafka, enriches data with business logic and writes to Silver layer
+- Step-by-step instructions for running both notebooks in VS Code
+- Troubleshooting guide for common issues (file paths, Kafka connectivity, JAR files)
+- Key concepts: file streaming, Kafka streaming, schema validation, Delta Lake writes with checkpointing
+
+### ✅ LOCAL_EXECUTION_CHECKLIST.md
+**Pre-Execution Verification**
+- All prerequisites verified: Python environment, PySpark, Delta Lake, JARs, sensor data files
+- **Bronze pipeline**: Ready immediately (no external services needed)
+- **Silver pipeline**: Requires Kafka cluster (Docker Compose provided)
+- Expected results: 500 Bronze records, 3500+ Silver records with enrichments
+- Complete file structure overview with input/output paths
+
+### 🚀 RUNNING_SCRIPTS_LOCALLY.md
+**Script Execution Guide**
+- ✅ Bronze test: 250 records processed successfully
+- ✅ Silver test: 2,417 Kafka messages processed with enrichments (comfort index, air quality)
+- Comparison: Notebooks (interactive) vs Scripts (continuous/production)
+- Test scripts for quick validation vs production scripts for continuous execution
+- Troubleshooting: path issues, Kafka connectivity, stopping long-running processes
+
+---
+
 ## 📚 Ressources
 
 - [Apache Spark Structured Streaming](https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html)

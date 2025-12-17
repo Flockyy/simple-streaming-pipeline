@@ -55,7 +55,7 @@ spark = SparkSession.builder \
 # Disable symlink resolution for WSL2 Docker compatibility
 spark.sparkContext._jsc.hadoopConfiguration().set("fs.file.impl", "org.apache.hadoop.fs.RawLocalFileSystem")
 spark.sparkContext.setLogLevel("WARN")
-print(f"✓ Spark Session created (version {spark.version})\n")
+print(f"Spark Session created (version {spark.version})\n")
 
 # Define schema for sensor data
 sensor_schema = StructType([
@@ -69,7 +69,7 @@ sensor_schema = StructType([
 ])
 
 # Read streaming JSON files
-print("📖 Setting up JSON file stream...")
+print("Setting up JSON file stream...")
 # Use explicit file:// URI for Docker (WSL2 compatibility)
 input_path = INPUT_PATH
 json_stream = spark.readStream \
@@ -77,10 +77,10 @@ json_stream = spark.readStream \
     .option("maxFilesPerTrigger", 5) \
     .json(input_path)
 
-print("✓ Stream configured\n")
+print("Stream configured\n")
 
 # Bronze transformations
-print("🔧 Applying Bronze transformations...")
+print("Applying Bronze transformations...")
 bronze_stream = json_stream \
     .withColumn("event_timestamp", to_timestamp(col("timestamp"))) \
     .withColumn("ingestion_timestamp", current_timestamp()) \
@@ -115,10 +115,10 @@ bronze_stream = json_stream \
         col("source_file")
     )
 
-print("✓ Transformations configured\n")
+print("Transformations configured\n")
 
 # Write to Delta Lake
-print("💾 Starting Delta Lake write stream...")
+print("Starting Delta Lake write stream...")
 query = bronze_stream.writeStream \
     .format("delta") \
     .outputMode("append") \
@@ -126,10 +126,10 @@ query = bronze_stream.writeStream \
     .trigger(processingTime="10 seconds") \
     .start(OUTPUT_PATH)
 
-print(f"✓ Streaming query started (ID: {query.id})")
-print(f"✓ Status: {query.status}")
+print(f"Streaming query started (ID: {query.id})")
+print(f"Status: {query.status}")
 print("\n" + "="*60)
-print("🔄 PIPELINE IS RUNNING - Processing sensor data...")
+print("PIPELINE IS RUNNING - Processing sensor data...")
 print("   Press Ctrl+C to stop")
 print("="*60 + "\n")
 
@@ -137,8 +137,8 @@ try:
     # Wait for termination
     query.awaitTermination()
 except KeyboardInterrupt:
-    print("\n⏹️  Stopping pipeline...")
+    print("\nStopping pipeline...")
     query.stop()
     spark.stop()
-    print("✓ Pipeline stopped gracefully")
+    print("Pipeline stopped gracefully")
     sys.exit(0)

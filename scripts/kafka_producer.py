@@ -27,7 +27,7 @@ print(f"Max Messages: {MAX_MESSAGES if MAX_MESSAGES else 'unlimited'}")
 print("="*60 + "\n")
 
 # Wait for Kafka to be ready
-print("⏳ Waiting for Kafka to be ready...")
+print("Waiting for Kafka to be ready...")
 time.sleep(10)
 
 # Create Kafka producer
@@ -39,20 +39,20 @@ try:
         retries=3,
         max_in_flight_requests_per_connection=1
     )
-    print("✓ Connected to Kafka broker\n")
+    print("Connected to Kafka broker\n")
 except Exception as e:
-    print(f"✗ Failed to connect to Kafka: {e}")
+    print(f"Failed to connect to Kafka: {e}")
     sys.exit(1)
 
 # Get all JSON files
 json_files = sorted(glob.glob(f"{DATA_PATH}/*.json"))
-print(f"📁 Found {len(json_files)} JSON files\n")
+print(f"Found {len(json_files)} JSON files\n")
 
 if not json_files:
-    print("✗ No JSON files found!")
+    print("No JSON files found!")
     sys.exit(1)
 
-print("🚀 Starting to send messages to Kafka...\n")
+print("Starting to send messages to Kafka...\n")
 
 messages_sent = 0
 errors = 0
@@ -71,35 +71,35 @@ try:
                     messages_sent += 1
                     
                     if messages_sent % 50 == 0:
-                        print(f"📤 Sent {messages_sent} messages "
+                        print(f"Sent {messages_sent} messages "
                               f"(device: {data.get('device_id', 'N/A')}, "
                               f"building: {data.get('building', 'N/A')})")
                     
                     # Check max messages limit
                     if MAX_MESSAGES and messages_sent >= MAX_MESSAGES:
-                        print(f"\n✓ Reached limit of {MAX_MESSAGES} messages")
+                        print(f"\nReached limit of {MAX_MESSAGES} messages")
                         break
                     
                     time.sleep(INTERVAL)
                     
                 except json.JSONDecodeError as e:
                     errors += 1
-                    print(f"✗ JSON decode error: {e}")
+                    print(f"JSON decode error: {e}")
                 except KafkaError as e:
                     errors += 1
-                    print(f"✗ Kafka send error: {e}")
+                    print(f"Kafka send error: {e}")
         
         if MAX_MESSAGES and messages_sent >= MAX_MESSAGES:
             break
 
 except KeyboardInterrupt:
-    print("\n⏹️  Interrupted by user")
+    print("\nInterrupted by user")
 finally:
     producer.flush()
     producer.close()
     
     print("\n" + "="*60)
-    print("📊 SUMMARY")
+    print("SUMMARY")
     print("="*60)
     print(f"Messages sent: {messages_sent}")
     print(f"Errors: {errors}")
